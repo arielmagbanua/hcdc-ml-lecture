@@ -1,5 +1,4 @@
 import numpy as np
-import tensorflow as tf
 from tensorflow import keras
 
 l0 = keras.layers.Dense(units=1, input_shape=[1])
