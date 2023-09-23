@@ -9,7 +9,6 @@ class KerasCallback(tf.keras.callbacks.Callback):
             print("\nReached 95% accuracy so cancelling training!")
             self.model.stop_training = True
 
-
 # load and split the dataset
 data = tf.keras.datasets.fashion_mnist
 (training_images, training_labels), (test_images, test_labels) = data.load_data()
@@ -18,15 +17,13 @@ data = tf.keras.datasets.fashion_mnist
 training_images = training_images / 255.0
 test_images = test_images / 255.0
 
-# create / compile the model
 model = tf.keras.models.Sequential([
+    tf.keras.layers.Conv2D(64, (3, 3), activation='relu', input_shape=(28, 28, 1)),
+    tf.keras.layers.MaxPooling2D(2, 2),
+    tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+    tf.keras.layers.MaxPooling2D(2,2),
     tf.keras.layers.Flatten(),
-    tf.keras.layers.Dense(256, activation=tf.nn.relu),
-    tf.keras.layers.Dropout(0.2),
     tf.keras.layers.Dense(128, activation=tf.nn.relu),
-    tf.keras.layers.Dropout(0.2),
-    tf.keras.layers.Dense(64, activation=tf.nn.relu),
-    tf.keras.layers.Dropout(0.2),
     tf.keras.layers.Dense(10, activation=tf.nn.softmax)
 ])
 
@@ -35,6 +32,9 @@ model.compile(
     loss='sparse_categorical_crossentropy',
     metrics=['accuracy']
 )
+
+# print the summary of layers
+model.summary()
 
 # create the callback
 callback = KerasCallback()
