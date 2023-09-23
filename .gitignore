@@ -165,4 +165,5 @@ cython_debug/
 h-or-h/horse-or-human/*
 h-or-h/horse-or-human.zip
 h-or-h/validation-horse-or-human.zip
-
+h-or-h/actual_samples.zip
+h-or-h/actual_samples/**

@@ -2,8 +2,9 @@ import tensorflow as tf
 import urllib.request
 import zipfile
 from keras.preprocessing.image import ImageDataGenerator
+from keras.preprocessing import image
 from keras.optimizers.legacy import RMSprop
-
+import numpy as np
 
 # training dataset url
 training_url = "https://storage.googleapis.com/learning-datasets/horse-or-human.zip"
@@ -31,9 +32,8 @@ zip_ref = zipfile.ZipFile(validation_file_name, 'r')
 zip_ref.extractall(validation_dir)
 zip_ref.close()
 
-
 # all images will be rescaled by 1./255
-train_datagen = ImageDataGenerator(rescale=1/255)
+train_datagen = ImageDataGenerator(rescale=1 / 255)
 train_generator = train_datagen.flow_from_directory(
     training_dir,
     target_size=(300, 300),
@@ -41,7 +41,7 @@ train_generator = train_datagen.flow_from_directory(
 )
 
 # all images will be rescaled by 1./255
-validation_datagen = ImageDataGenerator(rescale=1/255)
+validation_datagen = ImageDataGenerator(rescale=1 / 255)
 validation_generator = train_datagen.flow_from_directory(
     validation_dir,
     target_size=(300, 300),
@@ -52,20 +52,20 @@ validation_generator = train_datagen.flow_from_directory(
 model = tf.keras.models.Sequential([
     # note the input shape is the desired size of the image 300x300 with 3 bytes color
     # this is the first convolution
-    tf.keras.layers.Conv2D(16, (3,3), activation='relu', input_shape=(300, 300, 3)),
+    tf.keras.layers.Conv2D(16, (3, 3), activation='relu', input_shape=(300, 300, 3)),
     tf.keras.layers.MaxPooling2D(2, 2),
     # the second convolution
-    tf.keras.layers.Conv2D(32, (3,3), activation='relu'),
-    tf.keras.layers.MaxPooling2D(2,2),
+    tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
+    tf.keras.layers.MaxPooling2D(2, 2),
     # the third convolution
-    tf.keras.layers.Conv2D(64, (3,3), activation='relu'),
-    tf.keras.layers.MaxPooling2D(2,2),
+    tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+    tf.keras.layers.MaxPooling2D(2, 2),
     # the fourth convolution
-    tf.keras.layers.Conv2D(64, (3,3), activation='relu'),
-    tf.keras.layers.MaxPooling2D(2,2),
+    tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+    tf.keras.layers.MaxPooling2D(2, 2),
     # the fifth convolution
-    tf.keras.layers.Conv2D(64, (3,3), activation='relu'),
-    tf.keras.layers.MaxPooling2D(2,2),
+    tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+    tf.keras.layers.MaxPooling2D(2, 2),
     # flatten the results to feed into a DNN
     tf.keras.layers.Flatten(),
     # 512 neuron hidden layer
@@ -82,10 +82,73 @@ model.compile(
     metrics=['accuracy']
 )
 
+# train the model
 history = model.fit(
     train_generator,
     epochs=15,
     validation_data=validation_generator
 )
+print(history.history.keys())
 
-print(history)
+training_loss = history.history['loss']
+training_accuracy = history.history['accuracy']
+validation_loss = history.history['val_loss']
+validation_accuracy = history.history['val_accuracy']
+
+print(f'training loss: {training_loss}')
+print(f'training accuracy: {training_accuracy}')
+print(f'validation loss: {validation_loss}')
+print(f'validation accuracy: {validation_accuracy}')
+
+
+# function for printing horse or human based on result
+def horse_or_human(filename, result):
+    if result > 0.5:
+        print(f'{filename} is a human')
+    else:
+        print(f'{filename} is a horse')
+
+
+# download Actual Images
+actual_images_dl = 'https://drive.google.com/uc?export=download&id=1guy6SPfNId625-dDk43w5bxKeZX0luwt'
+filename = "actual_samples.zip"
+dir = 'actual_samples'
+urllib.request.urlretrieve(actual_images_dl, filename)
+
+# extract to directory
+zip_ref = zipfile.ZipFile(filename, 'r')
+zip_ref.extractall(dir)
+zip_ref.close()
+
+# image1.jpg
+image1 = image.load_img(dir + '/image1.jpg', target_size=(300, 300))
+# convert image to tensor
+image1_np = image.img_to_array(image1) / 255.
+image1_np = np.expand_dims(image1_np, axis=0)  # extend to make 3D array
+image1_tensor = np.vstack([image1_np])
+# make inference
+classes = model.predict(image1_tensor)
+result = classes[0]
+horse_or_human('image1.jpg', result)
+
+# image2.jpg
+image2 = image.load_img(dir + '/image2.jpg', target_size=(300, 300))
+# convert image to tensor
+image2_np = image.img_to_array(image2) / 255.
+image2_np = np.expand_dims(image2_np, axis=0)  # extend to make 3D array
+image2_tensor = np.vstack([image2_np])
+# make inference
+classes = model.predict(image2_tensor)
+result = classes[0]
+horse_or_human('image2.jpg', result)
+
+# image3.jpg
+image3 = image.load_img(dir + '/image3.jpg', target_size=(300, 300))
+# convert image to tensor
+image3_np = image.img_to_array(image3) / 255.
+image3_np = np.expand_dims(image3_np, axis=0)  # extend to make 3D array
+image3_tensor = np.vstack([image3_np])
+# make inference
+classes = model.predict(image3_tensor)
+result = classes[0]
+horse_or_human('image3.jpg', result)
