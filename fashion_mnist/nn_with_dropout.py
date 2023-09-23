@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 
 # custom keras callback
@@ -46,5 +47,6 @@ model.evaluate(test_images, test_labels)
 
 # inference / predict
 classifications = model.predict(test_images)
-print(classifications[0])
-print(test_labels[0])
+prediction = np.argmax(classifications[1]) # get the index of highest value
+print(prediction)  # prediction
+print(test_labels[1])  # true value label
