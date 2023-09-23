@@ -161,3 +161,6 @@ cython_debug/
 
 /**/.DS_Store
 /**/.idea
+
+h-or-h/horse-or-human/*
+
