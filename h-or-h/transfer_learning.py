@@ -93,9 +93,9 @@ print('last layer output shape: ', last_layer.output_shape)
 last_output = last_layer.output
 
 # flatten the output layer to 1 dimension
-x = layers.Flatten(input_shape=())(last_output)
-# add a fully connected layer with 1,024 hidden units and ReLU activation
-x = layers.Dense(1024, activation='relu')(x)
+x = layers.Flatten()(last_output)
+# add a fully connected layer with 512 hidden units and ReLU activation
+x = layers.Dense(512, activation='relu')(x)
 # add a dropout rate of 0.2
 x = layers.Dropout(0.2)(x)
 # add a final sigmoid layer for classification
