@@ -1,10 +1,21 @@
-import tensorflow as tf
 import urllib.request
 import zipfile
 from keras.preprocessing.image import ImageDataGenerator
+from keras import layers
+from keras import Model
 from keras.preprocessing import image
 from keras.optimizers.legacy import RMSprop
 import numpy as np
+from keras.applications.inception_v3 import InceptionV3
+
+
+# function for printing horse or human based on result
+def horse_or_human(filename, result):
+    if result > 0.5:
+        print(f'{filename} is a human')
+    else:
+        print(f'{filename} is a horse')
+
 
 # training dataset url
 training_url = "https://storage.googleapis.com/learning-datasets/horse-or-human.zip"
@@ -45,7 +56,8 @@ train_datagen = ImageDataGenerator(
 )
 train_generator = train_datagen.flow_from_directory(
     training_dir,
-    target_size=(300, 300),
+    target_size=(250, 250),
+    batch_size=128,
     class_mode='binary'
 )
 
@@ -55,70 +67,53 @@ validation_datagen = ImageDataGenerator(
 )
 validation_generator = train_datagen.flow_from_directory(
     validation_dir,
-    target_size=(300, 300),
+    target_size=(250, 250),
     class_mode='binary'
 )
 
-# create the model
-model = tf.keras.models.Sequential([
-    # note the input shape is the desired size of the image 300x300 with 3 bytes color
-    # this is the first convolution
-    tf.keras.layers.Conv2D(16, (3, 3), activation='relu', input_shape=(300, 300, 3)),
-    tf.keras.layers.MaxPooling2D(2, 2),
-    # the second convolution
-    tf.keras.layers.Conv2D(32, (3, 3), activation='relu'),
-    tf.keras.layers.MaxPooling2D(2, 2),
-    # the third convolution
-    tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
-    tf.keras.layers.MaxPooling2D(2, 2),
-    # the fourth convolution
-    tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
-    tf.keras.layers.MaxPooling2D(2, 2),
-    # the fifth convolution
-    tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
-    tf.keras.layers.MaxPooling2D(2, 2),
-    # flatten the results to feed into a DNN
-    tf.keras.layers.Flatten(),
-    # 512 neuron hidden layer
-    tf.keras.layers.Dense(512, activation='relu'),
-    # only 1 output neuron. It will contain a value from 0-1 where 0 for 1 class ('horses') and 1 for the other ('humans')
-    tf.keras.layers.Dense(1, activation='sigmoid')
-])
-model.summary()
+# download the weights and pre-trained model
+weights_url = "https://storage.googleapis.com/mledu-datasets/inception_v3_weights_tf_dim_ordering_tf_kernels_notop.h5"
+weights_file = "inception_v3.h5"
+urllib.request.urlretrieve(weights_url, weights_file)
+pre_trained_model = InceptionV3(
+    input_shape=(250, 250, 3),
+    include_top=False,
+    weights=None
+)
 
-# compile the model
+# load the weights
+pre_trained_model.load_weights(weights_file)
+# set the layer as not trainable
+for layer in pre_trained_model.layers:
+    layer.trainable = False
+
+# get the last layer of the pre-trained model
+last_layer = pre_trained_model.get_layer('mixed7')
+print('last layer output shape: ', last_layer.output_shape)
+last_output = last_layer.output
+
+# flatten the output layer to 1 dimension
+x = layers.Flatten(input_shape=())(last_output)
+# add a fully connected layer with 1,024 hidden units and ReLU activation
+x = layers.Dense(1024, activation='relu')(x)
+# add a dropout rate of 0.2
+x = layers.Dropout(0.2)(x)
+# add a final sigmoid layer for classification
+x = layers.Dense(1, activation='sigmoid')(x)
+
+model = Model(pre_trained_model.input, x)
+
 model.compile(
+    optimizer=RMSprop(learning_rate=0.0001),
     loss='binary_crossentropy',
-    optimizer=RMSprop(learning_rate=0.001),
     metrics=['accuracy']
 )
 
-# train the model
 history = model.fit(
     train_generator,
-    epochs=15,
-    validation_data=validation_generator
+    validation_data=validation_generator,
+    epochs=10
 )
-print(history.history.keys())
-
-training_loss = history.history['loss']
-training_accuracy = history.history['accuracy']
-validation_loss = history.history['val_loss']
-validation_accuracy = history.history['val_accuracy']
-
-print(f'training loss: {training_loss}')
-print(f'training accuracy: {training_accuracy}')
-print(f'validation loss: {validation_loss}')
-print(f'validation accuracy: {validation_accuracy}')
-
-
-# function for printing horse or human based on result
-def horse_or_human(filename, result):
-    if result > 0.5:
-        print(f'{filename} is a human')
-    else:
-        print(f'{filename} is a horse')
-
 
 # download Actual Images
 actual_images_dl = 'https://drive.google.com/uc?export=download&id=1guy6SPfNId625-dDk43w5bxKeZX0luwt'
@@ -132,7 +127,7 @@ zip_ref.extractall(dir)
 zip_ref.close()
 
 # image1.jpg
-image1 = image.load_img(dir + '/image1.jpg', target_size=(300, 300))
+image1 = image.load_img(dir + '/image1.jpg', target_size=(250, 250))
 # convert image to tensor
 image1_np = image.img_to_array(image1) / 255.
 image1_np = np.expand_dims(image1_np, axis=0)  # extend to make 3D array
@@ -143,7 +138,7 @@ result = classes[0]
 horse_or_human('image1.jpg', result)
 
 # image2.jpg
-image2 = image.load_img(dir + '/image2.jpg', target_size=(300, 300))
+image2 = image.load_img(dir + '/image2.jpg', target_size=(250, 250))
 # convert image to tensor
 image2_np = image.img_to_array(image2) / 255.
 image2_np = np.expand_dims(image2_np, axis=0)  # extend to make 3D array
@@ -154,7 +149,7 @@ result = classes[0]
 horse_or_human('image2.jpg', result)
 
 # image3.jpg
-image3 = image.load_img(dir + '/image3.jpg', target_size=(300, 300))
+image3 = image.load_img(dir + '/image3.jpg', target_size=(250, 250))
 # convert image to tensor
 image3_np = image.img_to_array(image3) / 255.
 image3_np = np.expand_dims(image3_np, axis=0)  # extend to make 3D array
